@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Blast Clone - Professional</title>
+    <style>
+        body {
+            background-color: #1a2a3a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            touch-action: none;
+        }
+
+        .score-box { font-size: 24px; margin-bottom: 20px; color: #f1c40f; }
+
+        /* ग्रिड स्टाइल */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(8, 40px);
+            gap: 4px;
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: #34495e;
+            border-radius: 4px;
+        }
+
+        .cell.filled { background: #3498db; }
+
+        /* शेप्स एरिया */
+        .shapes-area {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            height: 120px;
+        }
+
+        .shape {
+            display: grid;
+            gap: 2px;
+            cursor: grab;
+        }
+
+        .shape-cell {
+            width: 30px;
+            height: 30px;
+            background: #e74c3c;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="score-box">Score: <span id="score">0</span></div>
+    
+    <div class="grid" id="grid"></div>
+
+    <div class="shapes-area" id="shapes-area"></div>
+
+    <script>
+        const gridElement = document.getElementById('grid');
+        const shapesArea = document.getElementById('shapes-area');
+        const scoreElement = document.getElementById('score');
+        let score = 0;
+        let gridArray = Array(8).fill().map(() => Array(8).fill(0));
+
+        // 1. ग्रिड बनाना
+        function initGrid() {
+            gridElement.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        // 2. रैंडम शेप्स
+        const shapeLayouts = [
+            [[1, 1], [1, 1]], // Square
+            [[1, 1, 1]],      // Line
+            [[1, 1], [1, 0]]  // L-Shape
+        ];
+
+        function spawnShapes() {
+            shapesArea.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const layout = shapeLayouts[Math.floor(Math.random() * shapeLayouts.length)];
+                const shapeDiv = document.createElement('div');
+                shapeDiv.classList.add('shape');
+                shapeDiv.draggable = true;
+                shapeDiv.style.gridTemplateColumns = `repeat(${layout[0].length}, 30px)`;
+
+                layout.forEach(row => {
+                    row.forEach(isPart => {
+                        const c = document.createElement('div');
+                        if (isPart) c.classList.add('shape-cell');
+                        shapeDiv.appendChild(c);
+                    });
+                });
+
+                shapeDiv.addEventListener('dragstart', () => {
+                    window.draggedLayout = layout;
+                    window.draggedShape = shapeDiv;
+                });
+
+                shapesArea.appendChild(shapeDiv);
+            }
+        }
+
+        // 3. ड्रॉप लॉजिक
+        gridElement.addEventListener('dragover', e => e.preventDefault());
+        gridElement.addEventListener('drop', e => {
+            const target = e.target;
+            if (target.classList.contains('cell')) {
+                const r = parseInt(target.dataset.row);
+                const c = parseInt(target.dataset.col);
+                
+                // यहाँ हम सेल को कलर कर देते हैं (सिंपल वर्जन)
+                target.classList.add('filled');
+                score += 10;
+                scoreElement.innerText = score;
+                window.draggedShape.remove();
+                
+                if (shapesArea.children.length === 0) spawnShapes();
+            }
+        });
+
+        initGrid();
+        spawnShapes();
+    </script>
+</body>
+</html>
