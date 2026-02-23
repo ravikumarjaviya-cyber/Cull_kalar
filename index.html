@@ -1,0 +1,45 @@
+// बुनियादी गेम लॉजिक (Basic Game Logic)
+
+const grid = document.querySelector('.grid'); // आपकी ग्रिड क्लास
+const piecesContainer = document.querySelector('.pieces-container'); // जहाँ नए ब्लॉक्स दिखेंगे
+
+// 1. रैंडम ब्लॉक बनाना
+function generatePiece() {
+    const shapes = [
+        [[1, 1], [1, 1]], // Square
+        [[1, 1, 1, 1]],   // Line
+        [[1, 0], [1, 0], [1, 1]] // L Shape
+    ];
+    // यहाँ आप कोड लिखेंगे जो स्क्रीन के नीचे ये शेप्स दिखाए
+}
+
+// 2. ड्रैग एंड ड्रॉप फंक्शनलिटी
+let draggedPiece = null;
+
+function handleDragStart(e) {
+    draggedPiece = e.target;
+    e.dataTransfer.setData('text/plain', ''); // Firefox के लिए ज़रूरी
+}
+
+grid.addEventListener('dragover', (e) => {
+    e.preventDefault(); // ड्रॉप करने की अनुमति देने के लिए
+});
+
+grid.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const cell = e.target;
+    
+    if (cell.classList.contains('cell')) {
+        // यहाँ चेक करें कि क्या जगह खाली है
+        cell.style.backgroundColor = 'blue'; // ब्लॉक रखने पर रंग बदलें
+        console.log("ब्लॉक रखा गया!");
+    }
+});
+
+// गेम शुरू करने का फंक्शन
+function initGame() {
+    console.log("गेम लॉजिक लोड हो गया है।");
+    // अपनी ग्रिड सेल्स पर इवेंट लिसनर्स लगायें
+}
+
+initGame();
