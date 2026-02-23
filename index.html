@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Block Blast Master Pro</title>
+    <style>
+        :root { --gold: #ffcc00; --neon: #00f2fe; --bg: #0b0e14; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; height: 100vh; overflow: hidden; touch-action: none; }
+
+        /* टॉप बार */
+        .header { display: flex; justify-content: space-around; width: 100%; padding: 10px; background: rgba(0,0,0,0.6); border-bottom: 2px solid var(--gold); position: sticky; top: 0; z-index: 100; }
+        .stat-box { text-align: center; }
+        .stat-box b { display: block; font-size: 18px; color: var(--gold); }
+
+        /* लीडरबोर्ड */
+        .leaderboard { width: 90%; background: #1e293b; border-radius: 10px; margin-top: 10px; padding: 8px; font-size: 12px; border: 1px solid #334155; }
+        .player-row { display: flex; justify-content: space-between; padding: 2px 10px; border-bottom: 1px solid #2d3748; }
+
+        /* ग्रिड */
+        .grid { display: grid; grid-template-columns: repeat(8, 40px); gap: 4px; background: #000; padding: 10px; border-radius: 12px; margin-top: 15px; border: 2px solid #334155; }
+        .cell { width: 40px; height: 40px; background: #242f3e; border-radius: 4px; }
+        .cell.filled { background: linear-gradient(135deg, var(--neon), #0061ff); box-shadow: 0 0 10px var(--neon); animation: goldShine 1.5s infinite; }
+
+        @keyframes goldShine { 0% { filter: brightness(1); } 50% { filter: brightness(1.4); } 100% { filter: brightness(1); } }
+
+        /* ड्रैग एरिया */
+        .shapes-area { margin-top: 20px; display: flex; gap: 20px; height: 100px; align-items: center; }
+        .shape { display: grid; gap: 2px; cursor: grab; z-index: 10; }
+        .block-unit { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); box-shadow: inset -2px -2px rgba(0,0,0,0.2); }
+        .dragging { position: fixed; pointer-events: none; transform: scale(1.2); z-index: 1000; opacity: 0.9; }
+
+        /* धमाका अलर्ट */
+        #special-alert { position: fixed; top: 30%; font-size: 40px; font-weight: bold; color: var(--gold); text-shadow: 0 0 20px orange; display: none; z-index: 2000; animation: pop 0.6s ease; }
+        @keyframes pop { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* एड-ब्लॉक पट्टी */
+        .ad-banner { position: fixed; bottom: 0; width: 100%; height: 65px; background: #111; border-top: 2px solid #444; display: flex; align-items: center; justify-content: center; }
+        .ad-box { width: 45px; height: 45px; background: linear-gradient(45deg, #ff007f, #7e22ce); border-radius: 8px; margin-right: 10px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* गेम ओवर स्क्रीन */
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
+        .btn { padding: 12px 25px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; margin: 10px; width: 220px; }
+        .btn-wa { background: #25d366; color: white; }
+        .btn-revive { background: var(--gold); color: black; }
+    </style>
+</head>
+<body>
+
+    <div id="special-alert">NEW RECORD! ✨</div>
+
+    <div class="header">
+        <div class="stat-box"><small>BEST</small><b id="high-score">0</b></div>
+        <div class="stat-box"><small>SCORE</small><b id="score">0</b></div>
+        <div class="stat-box"><small>COINS</small><b>💰 <span id="coins">0</span></b></div>
+    </div>
+
+    <div class="leaderboard">
+        <div class="player-row" style="color:var(--gold)"><span>1. आप (YOU)</span> <b id="lb-score">0</b></div>
+        <div class="player-row"><span>2. Player_88</span> <b>1450</b></div>
+    </div>
+    
+    <div class="grid" id="grid"></div>
+    <div class="shapes-area" id="shapes-area"></div>
+
+    <div id="overlay">
+        <h2 id="over-title" style="color:red; font-size:32px;">GAME OVER!</h2>
+        <button class="btn btn-revive" onclick="revive()">🪙 100 Coins से शुरू करें</button>
+        <button class="btn btn-wa" onclick="shareGame()">📲 शेयर करें (+1000 Coins)</button>
+        <button onclick="location.reload()" style="color:gray; background:none; border:none; margin-top:10px;">दोबारा खेलें</button>
+    </div>
+
+    <div class="ad-banner">
+        <div class="ad-box"></div>
+        <div style="font-size: 12px;">AD REWARD BLOCK<br><small style="color:gray;">Ads help us keep it free!</small></div>
+    </div>
+
+    <audio id="sfx-blast" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+    <audio id="sfx-gold" src="https://www.soundjay.com/misc/sounds/magic-chime-01.mp3"></audio>
+
+    <script>
+        let score = 0;
+        let coins = parseInt(localStorage.getItem('gameCoins')) || 0;
+        let best = parseInt(localStorage.getItem('gameBest')) || 0;
+        let recordBroken = false;
+
+        document.getElementById('coins').innerText = coins;
+        document.getElementById('high-score').innerText = best;
+
+        const layouts = [
+            { shape: [[1,1,1,1]], color: '#00f2fe' },
+            { shape: [[1,1],[1,1]], color: '#ffcc00' },
+            { shape: [[1,0],[1,0],[1,1]], color: '#ff007f' },
+            { shape: [[1,1,1],[0,1,0]], color: '#7e22ce' }
+        ];
+
+        function initGrid() {
+            const grid = document.getElementById('grid');
+            for (let i = 0; i < 64; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                grid.appendChild(cell);
+            }
+            spawnShapes();
+        }
+
+        function spawnShapes() {
+            const area = document.getElementById('shapes-area');
+            area.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const data = layouts[Math.floor(Math.random() * layouts.length)];
+                const shapeDiv = document.createElement('div');
+                shapeDiv.className = 'shape';
+                shapeDiv.style.gridTemplateColumns = `repeat(${data.shape[0].length}, 28px)`;
+                
+                data.shape.forEach(row => {
+                    row.forEach(val => {
+                        const unit = document.createElement('div');
+                        if(val) {
+                            unit.className = 'block-unit';
+                            unit.style.backgroundColor = data.color;
+                        }
+                        shapeDiv.appendChild(unit);
+                    });
+                });
+
+                shapeDiv.onmousedown = (e) => startDrag(e, shapeDiv);
+                shapeDiv.ontouchstart = (e) => startDrag(e.touches[0], shapeDiv);
+                area.appendChild(shapeDiv);
+            }
+        }
+
+        function startDrag(e, el) {
+            const clone = el.cloneNode(true);
+            clone.classList.add('dragging');
+            document.body.appendChild(clone);
+
+            const move = (ev) => {
+                const p = ev.touches ? ev.touches[0] : ev;
+                clone.style.left = (p.clientX - 50) + 'px';
+                clone.style.top = (p.clientY - 50) + 'px';
+            };
+
+            const end = (ev) => {
+                document.removeEventListener('mousemove', move);
+                const p = ev.changedTouches ? ev.changedTouches[0] : ev;
+                const target = document.elementFromPoint(p.clientX, p.clientY);
+                
+                if (target && target.classList.contains('cell') && !target.classList.contains('filled')) {
+                    target.classList.add('filled');
+                    document.getElementById('sfx-blast').play();
+                    updateScore(20);
+                    el.style.visibility = 'hidden';
+                    if([...document.querySelectorAll('.shape')].every(s => s.style.visibility === 'hidden')) spawnShapes();
+                }
+                clone.remove();
+            };
+
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', end, {once:true});
+            document.addEventListener('touchmove', move);
+            document.addEventListener('touchend', end, {once:true});
+        }
+
+        function updateScore(pts) {
+            score += pts;
+            document.getElementById('score').innerText = score;
+            document.getElementById('lb-score').innerText = score;
+
+            if(score > best && !recordBroken && best > 0) {
+                recordBroken = true;
+                coins += 100;
+                document.getElementById('sfx-gold').play();
+                document.getElementById('special-alert').style.display = 'block';
+                setTimeout(() => document.getElementById('special-alert').style.display = 'none', 2000);
+                save();
+            }
+            if(score > 500) document.getElementById('overlay').style.display = 'flex'; 
+        }
+
+        function shareGame() {
+            const link = window.location.href;
+            const text = `🔥 मेरा नया रिकॉर्ड: ${score}! क्या तुम मुझे हरा सकते हो? यहाँ खेलो और 1000 सिक्के पाओ: ${link}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            coins += 1000;
+            save();
+            alert("1000 सिक्के मिले!");
+        }
+
+        function revive() {
+            if(coins >= 100) {
+                coins -= 100;
+                save();
+                document.getElementById('overlay').style.display = 'none';
+                document.querySelectorAll('.cell.filled').forEach((c, i) => { if(i%2==0) c.classList.remove('filled'); });
+            } else { alert("सिक्के कम हैं!"); }
+        }
+
+        function save() {
+            if(score > best) localStorage.setItem('gameBest', score);
+            localStorage.setItem('gameCoins', coins);
+            document.getElementById('coins').innerText = coins;
+        }
+
+        initGrid();
+    </script>
+</body>
+</html>
