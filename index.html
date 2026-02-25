@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Master Pro - Updated</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial', sans-serif; }
+        canvas { display: block; margin: 0 auto; background: #1a1a2e; transition: 0.2s; }
+        #ui { position: absolute; top: 15px; width: 100%; text-align: center; color: #fff; pointer-events: none; }
+        .stats { font-size: 18px; color: #00ff88; text-shadow: 2px 2px #000; }
+        #highScore { color: #ffeb3b; font-size: 14px; }
+        #gameOverFlash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: red; opacity: 0; pointer-events: none; transition: 0.1s; z-index: 5; }
+        
+        /* गेम ओवर स्क्रीन स्टाइल */
+        #gameOverScreen { 
+            display: none; 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            text-align: center; 
+            color: white; 
+            background: rgba(10, 10, 35, 0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border: 3px solid #e94560; 
+            width: 280px;
+            box-shadow: 0 0 20px #e94560;
+            z-index: 10;
+        }
+        #restartBtn {
+            margin-top: 15px;
+            padding: 12px 25px;
+            font-size: 18px;
+            background: #00ff88;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #000;
+            transition: 0.3s;
+        }
+        #restartBtn:hover { background: #00cc6e; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div id="gameOverFlash"></div>
+    
+    <div id="ui">
+        <div class="stats">
+            लेवल: <span id="level">1</span> | सिक्के: <span id="coins">0</span><br>
+            <span id="highScore">बेस्ट स्कोर: 0</span>
+        </div>
+    </div>
+
+    <div id="gameOverScreen">
+        <h1 style="color: #e94560; margin-bottom: 5px;">गेम ओवर!</h1>
+        <p id="finalScore" style="font-size: 22px; margin: 10px 0;"></p>
+        <p id="newRecord" style="color: #ffeb3b; display: none;">नया रिकॉर्ड! 🏆</p>
+        <button id="restartBtn" onclick="resetGame()">फिर से खेलें</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const flash = document.getElementById("gameOverFlash");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+
+        canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
+        canvas.height = 600;
+
+        let coins = 0;
+        let currentLevel = 1;
+        let gameSpeed = 3;
+        let isHolding = false;
+        let gameActive = true;
+        let particles = [];
+        
+        let bestScore = localStorage.getItem("bestCoins") || 0;
+        document.getElementById("highScore").innerText = "बेस्ट स्कोर: " + bestScore;
+
+        const player = {
+            x: 70, y: 300, width: 30, height: 30,
+            dy: 0, lift: -0.5, gravity: 0.4, color: "#e94560"
+        };
+
+        let lines = [];
+        const lineSpacing = 250;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 4 + 1;
+                this.speedX = (Math.random() - 0.5) * 8;
+                this.speedY = (Math.random() - 0.5) * 8;
+                this.color = color;
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.alpha -= 0.03;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function createBurst(x, y, color) {
+            for (let i = 0; i < 12; i++) particles.push(new Particle(x, y, color));
+        }
+
+        function createLine() {
+            const gapY = Math.random() * (canvas.height - 200) + 100;
+            lines.push({ x: canvas.width, y: gapY, width: 70, height: 15, passed: false });
+        }
+
+        function triggerGameOver() {
+            gameActive = false;
+            playSound(150, 'sawtooth', 0.5);
+            flash.style.opacity = "0.5";
+            
+            let isNewRecord = false;
+            if (coins > bestScore) {
+                bestScore = coins;
+                localStorage.setItem("bestCoins", bestScore);
+                document.getElementById("highScore").innerText = "बेस्ट स्कोर: " + bestScore;
+                isNewRecord = true;
+            }
+
+            document.getElementById("finalScore").innerText = "स्कोर: " + coins;
+            document.getElementById("newRecord").style.display = isNewRecord ? "block" : "none";
+            gameOverScreen.style.display = "block";
+        }
+
+        function resetGame() {
+            coins = 0;
+            currentLevel = 1;
+            gameSpeed = 3;
+            gameActive = true;
+            player.y = 300;
+            player.dy = 0;
+            lines = [];
+            particles = [];
+            flash.style.opacity = "0";
+            gameOverScreen.style.display = "none";
+            document.getElementById("coins").innerText = "0";
+            document.getElementById("level").innerText = "1";
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            if (isHolding) player.dy += player.lift;
+            else player.dy += player.gravity;
+            
+            player.y += player.dy;
+
+            if (player.y < 0 || player.y + player.height > canvas.height) triggerGameOver();
+
+            particles.forEach((p, i) => {
+                p.update();
+                if (p.alpha <= 0) particles.splice(i, 1);
+            });
+
+            lines.forEach((line, i) => {
+                line.x -= gameSpeed;
+
+                if (player.x < line.x + line.width && player.x + player.width > line.x &&
+                    player.y < line.y + line.height && player.y + player.height > line.y) {
+                    triggerGameOver();
+                }
+
+                if (line.x + line.width < player.x && !line.passed) {
+                    line.passed = true;
+                    coins += 10;
+                    createBurst(line.x + 35, line.y, "#ffeb3b");
+                    playSound(800, 'sine', 0.1);
+                    document.getElementById("coins").innerText = coins;
+                    
+                    if (coins % 100 === 0) {
+                        currentLevel++;
+                        gameSpeed += 0.5;
+                        playSound(1200, 'square', 0.3);
+                        document.getElementById("level").innerText = currentLevel;
+                    }
+                }
+                if (line.x + line.width < 0) lines.splice(i, 1);
+            });
+
+            if (lines.length === 0 || lines[lines.length - 1].x < canvas.width - lineSpacing) createLine();
+        }
+
+        function draw() {
+            ctx.fillStyle = currentLevel % 2 !== 0 ? "#1a1a2e" : "#0f0c29";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => p.draw());
+
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            ctx.fillStyle = currentLevel % 2 !== 0 ? "#00ff88" : "#00d4ff";
+            ctx.shadowColor = ctx.fillStyle;
+            lines.forEach(line => {
+                ctx.fillRect(line.x, line.y, line.width, line.height);
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener("mousedown", () => { 
+            if(gameActive) isHolding = true; 
+            if(audioCtx.state === 'suspended') audioCtx.resume(); 
+        });
+        window.addEventListener("mouseup", () => isHolding = false);
+        window.addEventListener("touchstart", (e) => { 
+            if(gameActive) isHolding = true; 
+            if(audioCtx.state === 'suspended') audioCtx.resume(); 
+        });
+        window.addEventListener("touchend", () => isHolding = false);
+
+        loop();
+    </script>
+</body>
+</html>
