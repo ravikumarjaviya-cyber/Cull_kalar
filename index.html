@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Master - Level Up Edition</title>
+    <style>
+        body { margin: 0; background: #1a1a2e; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; margin: 0 auto; border: 3px solid #fff; transition: background 1s ease; }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; color: #fff; pointer-events: none; }
+        .score-box { font-size: 22px; font-weight: bold; }
+        #levelText { font-size: 30px; color: #ffeb3b; display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="score-box">Coins: <span id="coins">0</span> | Level: <span id="level">1</span></div>
+        <div id="levelText">LEVEL UP! 🚀</div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
+        canvas.height = 650;
+
+        let coins = 0;
+        let distance = 0;
+        let currentLevel = 1;
+        let gameSpeed = 3; 
+        let isHolding = false;
+        let gameActive = true;
+        let bgGradient = ["#16213e", "#0f3460"]; // डिफ़ॉल्ट लेवल 1 कलर
+
+        const player = {
+            x: 80, y: 300, width: 35, height: 35,
+            dy: 0, lift: -0.6, gravity: 0.4, color: "#e94560" 
+        };
+
+        const lines = [];
+        const lineSpacing = 220;
+
+        function checkLevelUp() {
+            if (coins >= 100 && currentLevel === 1) {
+                currentLevel = 2;
+                gameSpeed = 5; // स्पीड बढ़ गई
+                bgGradient = ["#2e0249", "#570a57"]; // लेवल 2 का नया फैंसी कलर
+                showLevelText();
+                document.getElementById("level").innerText = currentLevel;
+            }
+        }
+
+        function showLevelText() {
+            const txt = document.getElementById("levelText");
+            txt.style.display = "block";
+            setTimeout(() => { txt.style.display = "none"; }, 2000);
+        }
+
+        function createLine() {
+            const gapY = Math.random() * (canvas.height - 250) + 120;
+            lines.push({ x: canvas.width, y: gapY, width: 90, height: 12, passed: false });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            if (isHolding) player.dy += player.lift;
+            else player.dy += player.gravity;
+            
+            player.y += player.dy;
+
+            if (player.y < 0 || player.y + player.height > canvas.height) gameOver();
+
+            lines.forEach((line, i) => {
+                line.x -= gameSpeed;
+
+                if (player.x < line.x + line.width && player.x + player.width > line.x &&
+                    player.y < line.y + line.height && player.y + player.height > line.y) {
+                    gameOver();
+                }
+
+                if (line.x + line.width < player.x && !line.passed) {
+                    line.passed = true;
+                    coins += 10; // हर लाइन पर 10 सिक्के
+                    document.getElementById("coins").innerText = coins;
+                    checkLevelUp();
+                }
+                if (line.x + line.width < 0) lines.splice(i, 1);
+            });
+
+            if (lines.length === 0 || lines[lines.length - 1].x < canvas.width - lineSpacing) {
+                createLine();
+            }
+        }
+
+        function draw() {
+            // बैकग्राउंड ग्रेडिएंट
+            let grd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grd.addColorStop(0, bgGradient[0]);
+            grd.addColorStop(1, bgGradient[1]);
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // फैंसी प्लेयर
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+            ctx.beginPath();
+            ctx.roundRect(player.x, player.y, player.width, player.height, 8);
+            ctx.fill();
+            
+            // ऑंखें
+            ctx.fillStyle = "white";
+            ctx.fillRect(player.x + 22, player.y + 8, 6, 6);
+            ctx.shadowBlur = 0;
+
+            // लाइनें
+            ctx.fillStyle = currentLevel === 1 ? "#00ff88" : "#ffeb3b";
+            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+            lines.forEach(line => {
+                ctx.fillRect(line.x, line.y, line.width, line.height);
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        function gameOver() {
+            gameActive = false;
+            alert("गेम ओवर! लेवल: " + currentLevel + " | सिक्के: " + coins);
+            location.reload();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener("mousedown", () => isHolding = true);
+        window.addEventListener("mouseup", () => isHolding = false);
+        window.addEventListener("touchstart", (e) => { e.preventDefault(); isHolding = true; });
+        window.addEventListener("touchend", () => isHolding = false);
+
+        loop();
+    </script>
+</body>
+</html>
