@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Master Pro - Ravi Special Edition</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial', sans-serif; }
+        canvas { display: block; margin: 0 auto; background: #1a1a2e; }
+        #ui { position: absolute; top: 15px; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; }
+        .stats { font-size: 20px; color: #00ff88; text-shadow: 2px 2px #000; font-weight: bold; }
+        #highScore { color: #ffeb3b; font-size: 16px; margin-top: 5px; display: block;}
+        
+        #countdownOverlay { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 100px; color: #fff; font-weight: bold; text-shadow: 0 0 20px #00ff88;
+            z-index: 20; display: none;
+        }
+        
+        #gameOverScreen { 
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; color: white; background: rgba(10, 10, 35, 0.95); padding: 30px;
+            border-radius: 15px; border: 3px solid #e94560; width: 300px; z-index: 30;
+        }
+        
+        #daughterMessage { font-size: 18px; color: #ffeb3b; font-style: italic; margin-bottom: 20px; padding-top: 10px; border-top: 1px solid #444; }
+        
+        #restartBtn { 
+            padding: 15px 30px; font-size: 20px; background: #00ff88; border: none; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; color: #000; 
+            box-shadow: 0 4px #00c86b;
+        }
+        #restartBtn:active { transform: translateY(2px); box-shadow: 0 2px #00c86b; }
+    </style>
+</head>
+<body>
+
+    <div id="countdownOverlay">5</div>
+    
+    <div id="ui">
+        <div class="stats">
+            लेवल: <span id="level">1</span> | सिक्के: <span id="coins">0</span>
+            <span id="highScore">बेस्ट स्कोर: 0</span>
+        </div>
+    </div>
+
+    <div id="gameOverScreen">
+        <h1 style="color: #e94560;">गेम ओवर!</h1>
+        <p id="finalScore" style="font-size: 24px; font-weight: bold;"></p>
+        <p id="daughterMessage"></p>
+        <button id="restartBtn" onclick="initCountdown()">फिर से खेलें 🚀</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const countdownEl = document.getElementById("countdownOverlay");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const finalScoreEl = document.getElementById("finalScore");
+        const daughterMessageEl = document.getElementById("daughterMessage");
+
+        canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
+        canvas.height = 600;
+
+        let coins = 0, currentLevel = 1, gameSpeed = 3, isHolding = false, gameActive = false, isPausedForStart = true;
+        let particles = [], lines = [], bonusItems = [];
+        let daughterNames = ["मोनिका ⭐", "यशिका ⭐", "गुंजन श्री ⭐"];
+        let motivationalMessages = ["ने कहा: कोई बात नहीं पापा, फिर से कोशिश करो! ❤️", "ने कहा: आप बहुत अच्छा खेले! 👍", "ने कहा: हार मत मानना! 💪"];
+
+        let bestScore = localStorage.getItem("bestCoins_ravi") || 0;
+        document.getElementById("highScore").innerText = "बेस्ट स्कोर: " + bestScore;
+
+        const player = { x: 60, y: 300, width: 40, height: 40, dy: 0, lift: -0.6, gravity: 0.4, icon: "🚀" };
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type, duration) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        // --- रिस्टार्ट फंक्शन: बटन दबाने पर यह चलेगा ---
+        function initCountdown() {
+            // 1. UI और पुराने डेटा को साफ़ करें
+            gameOverScreen.style.display = "none";
+            countdownEl.style.display = "block";
+            
+            // 2. सभी गेम वेरिएबल्स रीसेट करें
+            coins = 0; currentLevel = 1; gameSpeed = 3;
+            player.y = 300; player.dy = 0;
+            lines = []; bonusItems = []; particles = [];
+            document.getElementById("coins").innerText = "0";
+            document.getElementById("level").innerText = "1";
+            
+            isPausedForStart = true;
+            gameActive = false;
+            
+            // 3. काउंटडाउन शुरू करें
+            let count = 5;
+            countdownEl.innerText = count;
+            
+            let timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownEl.innerText = count;
+                    playSound(400, 'sine', 0.1);
+                } else {
+                    clearInterval(timer);
+                    countdownEl.style.display = "none";
+                    isPausedForStart = false; // गेम अपडेट चालू करें
+                    gameActive = true;       // गेम एक्टिव करें
+                    playSound(800, 'sine', 0.3);
+                }
+            }, 1000);
+        }
+
+        function triggerGameOver() {
+            if (!gameActive) return;
+            gameActive = false;
+
+            if (coins > bestScore) {
+                bestScore = coins;
+                localStorage.setItem("bestCoins_ravi", bestScore);
+                document.getElementById("highScore").innerText = "बेस्ट स्कोर: " + bestScore;
+                finalScoreEl.innerText = "नया रिकॉर्ड: " + coins + "! 🏆";
+            } else {
+                finalScoreEl.innerText = "आपका स्कोर: " + coins;
+            }
+
+            let randomDaughter = daughterNames[Math.floor(Math.random() * daughterNames.length)];
+            let randomMsg = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
+            daughterMessageEl.innerText = randomDaughter + " " + randomMsg;
+
+            gameOverScreen.style.display = "block";
+            playSound(150, 'sawtooth', 0.5);
+        }
+
+        function update() {
+            if (isPausedForStart || !gameActive) return;
+
+            if (isHolding) player.dy += player.lift;
+            else player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y < 0 || player.y + player.height > canvas.height) triggerGameOver();
+
+            lines.forEach((line, i) => {
+                line.x -= gameSpeed;
+                if (player.x < line.x + line.width && player.x + player.width > line.x &&
+                    player.y < line.y + line.height && player.y + player.height > line.y) triggerGameOver();
+                
+                if (line.x + line.width < player.x && !line.passed) {
+                    line.passed = true; coins += 10;
+                    document.getElementById("coins").innerText = coins;
+                    if (coins % 100 === 0) { currentLevel++; gameSpeed += 0.5; document.getElementById("level").innerText = currentLevel; }
+                }
+                if (line.x + line.width < 0) lines.splice(i, 1);
+            });
+
+            bonusItems.forEach((bonus, i) => {
+                bonus.x -= gameSpeed;
+                if (player.x < bonus.x + 80 && player.x + player.width > bonus.x &&
+                    player.y < bonus.y + 20 && player.y + player.height > bonus.y - 20) {
+                    coins += 50;
+                    document.getElementById("coins").innerText = coins;
+                    bonusItems.splice(i, 1);
+                    playSound(1000, 'sine', 0.2);
+                }
+                if (bonus.x < -150) bonusItems.splice(i, 1);
+            });
+
+            if (lines.length === 0 || lines[lines.length - 1].x < canvas.width - 250) {
+                const gapY = Math.random() * (canvas.height - 200) + 100;
+                lines.push({ x: canvas.width, y: gapY, width: 70, height: 15, passed: false });
+                if (Math.random() > 0.7) {
+                    bonusItems.push({ x: canvas.width + 100, y: Math.random() * (canvas.height - 100) + 50, name: daughterNames[Math.floor(Math.random() * daughterNames.length)] });
+                }
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "#1a1a2e";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = "#00ff88";
+            lines.forEach(line => ctx.fillRect(line.x, line.y, line.width, line.height));
+            
+            ctx.fillStyle = "#ffeb3b";
+            ctx.font = "bold 16px Arial";
+            bonusItems.forEach(bonus => ctx.fillText(bonus.name, bonus.x, bonus.y));
+
+            // प्लेयर ड्रॉ
+            ctx.font = player.height + "px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(player.icon, player.x + player.width/2, player.y + player.height/2);
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+        window.addEventListener("mousedown", () => isHolding = true);
+        window.addEventListener("mouseup", () => isHolding = false);
+        window.addEventListener("touchstart", (e) => { isHolding = true; e.preventDefault(); }, {passive: false});
+        window.addEventListener("touchend", () => isHolding = false);
+
+        // पहली बार गेम शुरू करने के लिए
+        initCountdown();
+        loop();
+    </script>
+</body>
+</html>
