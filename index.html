@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Blast Clone</title>
+    <style>
+        body { background-color: #121213; color: white; text-align: center; font-family: 'Arial', sans-serif; touch-action: none; }
+        .header { margin-top: 20px; font-size: 24px; font-weight: bold; }
+        #score { color: #ffcc00; }
+        
+        #grid { 
+            display: grid; grid-template-columns: repeat(8, 45px); grid-template-rows: repeat(8, 45px); 
+            gap: 5px; background-color: #1a1a1b; padding: 10px; border-radius: 10px;
+            margin: 20px auto; width: fit-content; border: 2px solid #333;
+        }
+        .cell { width: 45px; height: 45px; background-color: #2c2c2e; border-radius: 5px; transition: 0.2s; }
+        .filled { background-color: #ff007f !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        
+        #pieces-container { display: flex; justify-content: center; gap: 30px; margin-top: 30px; min-height: 120px; }
+        .piece { display: grid; cursor: grab; padding: 5px; }
+        .p-block { width: 35px; height: 35px; background-color: #00e5ff; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="header">SCORE: <span id="score">0</span></div>
+    
+    <div id="grid"></div>
+
+    <div id="pieces-container">
+        </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const scoreElement = document.getElementById('score');
+        const piecesContainer = document.getElementById('pieces-container');
+        let score = 0;
+        let gridState = Array(64).fill(false);
+
+        // 1. ग्रिड बनाना
+        function createGrid() {
+            for (let i = 0; i < 64; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.id = `cell-${i}`;
+                grid.appendChild(cell);
+            }
+        }
+
+        // 2. लाइन चेक करना और डिलीट करना (Main Feature)
+        function checkLines() {
+            let linesToDelete = [];
+
+            // हॉरिजॉन्टल चेक (Rows)
+            for (let r = 0; r < 8; r++) {
+                let full = true;
+                for (let c = 0; c < 8; c++) {
+                    if (!gridState[r * 8 + c]) full = false;
+                }
+                if (full) linesToDelete.push({type: 'row', index: r});
+            }
+
+            // वर्टिकल चेक (Columns)
+            for (let c = 0; c < 8; c++) {
+                let full = true;
+                for (let r = 0; r < 8; r++) {
+                    if (!gridState[r * 8 + c]) full = false;
+                }
+                if (full) linesToDelete.push({type: 'col', index: c});
+            }
+
+            // लाइन गायब करना
+            linesToDelete.forEach(line => {
+                if (line.type === 'row') {
+                    for (let c = 0; c < 8; c++) gridState[line.index * 8 + c] = false;
+                } else {
+                    for (let r = 0; r < 8; r++) gridState[r * 8 + line.index] = false;
+                }
+                score += 100;
+            });
+
+            updateVisuals();
+            scoreElement.innerText = score;
+        }
+
+        function updateVisuals() {
+            gridState.forEach((isFilled, i) => {
+                const cell = document.getElementById(`cell-${i}`);
+                if (isFilled) cell.classList.add('filled');
+                else cell.classList.remove('filled');
+            });
+        }
+
+        // 3. ब्लॉक्स को रखने का लॉजिक (क्लिक करके टेस्ट करने के लिए)
+        grid.addEventListener('click', (e) => {
+            if (e.target.classList.contains('cell')) {
+                const id = parseInt(e.target.id.split('-')[1]);
+                gridState[id] = !gridState[id]; // सेल को भरना/खाली करना
+                updateVisuals();
+                checkLines();
+            }
+        });
+
+        createGrid();
+    </script>
+</body>
+</html>
