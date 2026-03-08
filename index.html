@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Monika Play - Flute Edition</title>
+    <style>
+        :root {
+            --primary: #ff007f;
+            --bg-dark: #0a0a0b;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: var(--bg-dark); color: white; text-align: center; 
+            font-family: sans-serif; margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden; touch-action: none;
+        }
+        .header { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative; }
+        .title { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: 2px; }
+        #game-area { flex: 1; display: flex; justify-content: center; align-items: center; padding: 10px; }
+        #grid { 
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; 
+            background: rgba(255,255,255,0.05); padding: 8px; border-radius: 12px;
+            width: 100%; max-width: 360px; aspect-ratio: 1/1;
+        }
+        .cell { background: rgba(255,255,255,0.05); border-radius: 4px; transition: background 0.2s, transform 0.2s; }
+        .filled { background-color: var(--block-color) !important; box-shadow: 0 0 10px var(--glow-color); transform: scale(0.95); }
+        
+        .clearing { animation: flash 0.3s alternate 2; }
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.3; background: #fff; } }
+
+        #pieces-container { height: 160px; display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .piece { display: grid; gap: 2px; cursor: grab; position: relative; transition: transform 0.1s; }
+        .p-block { border-radius: 3px; width: 32px; height: 32px; }
+        
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .modal-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 80%; border: 1px solid var(--primary); }
+        .btn { width: 100%; padding: 15px; border-radius: 10px; border: none; background: var(--primary); color: white; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        
+        #music-toggle { position: absolute; right: 15px; top: 15px; font-size: 20px; cursor: pointer; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay" class="overlay">
+        <div class="modal-box">
+            <h2 style="color:var(--primary)">MONIKA PLAY</h2>
+            <p>बाँसुरी की धुन के साथ खेलें</p>
+            <button class="btn" onclick="doLogin()">गेम शुरू करें</button>
+        </div>
+    </div>
+
+    <div id="gameOverOverlay" class="overlay">
+        <div class="modal-box">
+            <h2 style="color:var(--primary)">GAME OVER</h2>
+            <p>आपका स्कोर: <span id="finalScore">0</span></p>
+            <button class="btn" onclick="restartGame()">फिर से खेलें</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <div id="music-toggle" onclick="toggleMusic()">🎵</div>
+        <div class="title">MONIKA PLAY</div>
+        <div style="font-size: 14px; margin-top: 5px;">Score: <span id="score">0</span> | Best: <span id="highScore">0</span></div>
+    </div>
+
+    <div id="game-area"><div id="grid"></div></div>
+    <div id="pieces-container"></div>
+
+    <script>
+        let score = 0;
+        let gridState = Array(64).fill(null);
+        let currentPiecesData = [null, null, null];
+        const TOUCH_OFFSET = 80;
+
+        // --- Flute Music System ---
+        let audioCtx = null;
+        let musicPlaying = false;
+        let nextNoteTime = 0;
+        const fluteNotes = [440, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99]; // धुन की फ्रीक्वेंसी
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                playFluteLoop();
+            }
+        }
+
+        function playFluteLoop() {
+            if (!musicPlaying) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            
+            // बाँसुरी जैसी आवाज़ के लिए Sine wave और हल्का Fade
+            osc.type = 'sine';
+            let freq = fluteNotes[Math.floor(Math.random() * fluteNotes.length)];
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.5);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.5);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 3);
+            
+            setTimeout(playFluteLoop, 2000); // हर 2 सेकंड में अगली धुन
+        }
+
+        function toggleMusic() {
+            musicPlaying = !musicPlaying;
+            document.getElementById('music-toggle').innerText = musicPlaying ? "🔊" : "🔇";
+            if(musicPlaying) {
+                if(!audioCtx) initAudio();
+                else playFluteLoop();
+            }
+        }
+
+        // --- Game Logic ---
+        window.onload = () => {
+            if (!localStorage.getItem('monikaLoggedIn')) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+            } else { initGame(); }
+        };
+
+        function doLogin() {
+            localStorage.setItem('monikaLoggedIn', 'true');
+            document.getElementById('loginOverlay').style.display = 'none';
+            musicPlaying = true;
+            initAudio();
+            initGame();
+        }
+
+        function initGame() {
+            score = 0;
+            gridState.fill(null);
+            document.getElementById('score').innerText = "0";
+            document.getElementById('highScore').innerText = localStorage.getItem('monikaBest') || 0;
+            document.getElementById('gameOverOverlay').style.display = 'none';
+            createGrid();
+            createPieces();
+        }
+
+        function restartGame() { initGame(); }
+
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for(let i=0; i<64; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell'; cell.id = 'cell-'+i;
+                grid.appendChild(cell);
+            }
+        }
+
+        const colors = [
+            { bg: '#ff007f', glow: 'rgba(255, 0, 127, 0.5)' },
+            { bg: '#00FF7F', glow: 'rgba(0, 255, 127, 0.5)' },
+            { bg: '#00E5FF', glow: 'rgba(0, 229, 255, 0.5)' },
+            { bg: '#FFD700', glow: 'rgba(255, 215, 0, 0.5)' }
+        ];
+
+        const shapes = [
+            {data:[[1,1],[1,1]]}, {data:[[1,1,1]]}, {data:[[1,1,1],[0,1,0]]}, {data:[[1,1],[1,0]]}, {data:[[1]]}, {data:[[1,1,1,1]]}
+        ];
+
+        function createPieces() {
+            const container = document.getElementById('pieces-container');
+            container.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                let shape = shapes[Math.floor(Math.random()*shapes.length)];
+                let color = colors[Math.floor(Math.random()*colors.length)];
+                currentPiecesData[i] = { shape: shape.data, color: color };
+                
+                let p = document.createElement('div');
+                p.className = 'piece'; p.setAttribute('data-idx', i);
+                p.style.gridTemplateColumns = `repeat(${shape.data[0].length}, 32px)`;
+                
+                shape.data.forEach(row => row.forEach(v => {
+                    let b = document.createElement('div');
+                    b.className = 'p-block';
+                    if(v) { b.style.background = color.bg; } else { b.style.visibility = 'hidden'; }
+                    p.appendChild(b);
+                }));
+                addTouchEvents(p, shape.data, color);
+                container.appendChild(p);
+            }
+            checkGameOver();
+        }
+
+        function addTouchEvents(p, sh, col) {
+            let startX, startY;
+            p.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                const rect = p.getBoundingClientRect();
+                startX = rect.width / 2;
+                startY = rect.height / 2;
+                p.style.zIndex = "1000";
+                p.style.transform = "scale(1.2)";
+            });
+
+            p.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                p.style.position = 'fixed';
+                p.style.left = (touch.clientX - startX) + 'px';
+                p.style.top = (touch.clientY - startY - TOUCH_OFFSET) + 'px'; 
+            });
+
+            p.addEventListener('touchend', (e) => {
+                const pieceRect = p.getBoundingClientRect();
+                const checkX = pieceRect.left + 16;
+                const checkY = pieceRect.top + 16;
+
+                p.style.display = 'none';
+                const target = document.elementFromPoint(checkX, checkY);
+                p.style.display = 'grid';
+
+                if (target && target.classList.contains('cell')) {
+                    const id = parseInt(target.id.split('-')[1]);
+                    const r = Math.floor(id / 8);
+                    const c = id % 8;
+
+                    if (canPlace(r, c, sh)) {
+                        place(r, c, sh, col);
+                        p.remove();
+                        checkLines();
+                        if (document.getElementById('pieces-container').children.length === 0) createPieces();
+                    } else { resetPiece(p); }
+                } else { resetPiece(p); }
+            });
+        }
+
+        function canPlace(sr, sc, sh) {
+            for(let r=0; r<sh.length; r++) {
+                for(let c=0; c<sh[r].length; c++) {
+                    if(sh[r][c]) {
+                        let cr = sr + r, cc = sc + c;
+                        if(cr >= 8 || cc >= 8 || gridState[cr*8+cc]) return false;
+                    }
+                }
+            } return true;
+        }
+
+        function place(sr, sc, sh, col) {
+            for(let r=0; r<sh.length; r++) {
+                for(let c=0; c<sh[r].length; c++) {
+                    if(sh[r][c]) gridState[(sr+r)*8+(sc+c)] = col;
+                }
+            }
+            score += 10;
+            updateUI();
+        }
+
+        function checkLines() {
+            let rowsToClear = [];
+            let colsToClear = [];
+            for(let i=0; i<8; i++) {
+                let rFull=true, cFull=true;
+                for(let j=0; j<8; j++) {
+                    if(!gridState[i*8+j]) rFull=false;
+                    if(!gridState[j*8+i]) cFull=false;
+                }
+                if(rFull) rowsToClear.push(i);
+                if(cFull) colsToClear.push(i);
+            }
+
+            if(rowsToClear.length > 0 || colsToClear.length > 0) {
+                rowsToClear.forEach(r => {
+                    for(let c=0; c<8; c++) document.getElementById('cell-'+(r*8+c)).classList.add('clearing');
+                });
+                colsToClear.forEach(c => {
+                    for(let r=0; r<8; r++) document.getElementById('cell-'+(r*8+c)).classList.add('clearing');
+                });
+
+                setTimeout(() => {
+                    rowsToClear.forEach(r => { for(let j=0; j<8; j++) gridState[r*8+j] = null; });
+                    colsToClear.forEach(c => { for(let j=0; j<8; j++) gridState[j*8+c] = null; });
+                    score += (rowsToClear.length + colsToClear.length) * 100;
+                    updateUI();
+                    document.querySelectorAll('.cell').forEach(el => el.classList.remove('clearing'));
+                    checkGameOver();
+                }, 300);
+            } else {
+                checkGameOver();
+            }
+        }
+
+        function checkGameOver() {
+            const pieces = document.querySelectorAll('.piece');
+            if (pieces.length === 0) return;
+            let anyPossible = false;
+            pieces.forEach(p => {
+                const idx = p.getAttribute('data-idx');
+                const sh = currentPiecesData[idx].shape;
+                for (let i = 0; i < 64; i++) {
+                    if (canPlace(Math.floor(i/8), i%8, sh)) anyPossible = true;
+                }
+            });
+            if (!anyPossible) {
+                const best = localStorage.getItem('monikaBest') || 0;
+                if(score > best) localStorage.setItem('monikaBest', score);
+                document.getElementById('finalScore').innerText = score;
+                document.getElementById('gameOverOverlay').style.display = 'flex';
+                musicPlaying = false; // Game over पर म्यूजिक बंद
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            gridState.forEach((v, i) => {
+                const cell = document.getElementById('cell-'+i);
+                if(v) {
+                    cell.classList.add('filled');
+                    cell.style.setProperty('--block-color', v.bg);
+                    cell.style.setProperty('--glow-color', v.glow);
+                } else { cell.classList.remove('filled'); cell.style.background = ""; }
+            });
+        }
+
+        function resetPiece(p) {
+            p.style.position = 'relative';
+            p.style.left = '0'; p.style.top = '0';
+            p.style.transform = "scale(1)";
+            p.style.zIndex = "1";
+        }
+    </script>
+</body>
+</html>
