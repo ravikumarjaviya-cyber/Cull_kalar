@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Monika Play - Neon Edition</title>
+    <style>
+        :root { --primary: #ff007f; --secondary: #00E5FF; --accent: #7000ff; --bg: #030305; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body { 
+            background: var(--bg); color: white; text-align: center; 
+            font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; overflow: hidden; 
+            touch-action: none; display: flex; flex-direction: column; height: 100vh;
+        }
+
+        /* --- Animated Glowing Background --- */
+        body::before {
+            content: ""; position: fixed; inset: 0;
+            background: radial-gradient(circle at 50% 50%, #1a0033 0%, #000 100%);
+            z-index: -1;
+        }
+
+        /* --- Loading Screen --- */
+        #splash-screen {
+            position: fixed; inset: 0; background: #000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .loader-logo { 
+            font-size: 55px; font-weight: 900; color: var(--primary); 
+            text-shadow: 0 0 20px var(--primary), 0 0 40px var(--primary); 
+            animation: pulseGlow 2s infinite ease-in-out; 
+        }
+        @keyframes pulseGlow { 0%, 100% { opacity: 0.7; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.05); } }
+
+        /* --- Home Screen with Glassmorphism --- */
+        #home-screen {
+            position: fixed; inset: 0; display: none; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 5000;
+        }
+        .logo-main { 
+            font-size: 45px; font-weight: 900; background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255,0,127,0.5)); margin-bottom: 50px;
+        }
+        
+        .mode-card {
+            width: 85%; max-width: 340px; padding: 35px; border-radius: 30px; margin-bottom: 25px;
+            cursor: pointer; transition: 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1); position: relative;
+            overflow: hidden;
+        }
+        .mode-card::after {
+            content: ""; position: absolute; inset: 0; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: translateX(-100%); transition: 0.5s;
+        }
+        .mode-card:hover::after { transform: translateX(100%); }
+        .mode-card:active { transform: scale(0.9); }
+        
+        .card-classic { border-left: 6px solid var(--primary); box-shadow: 0 15px 35px -10px rgba(255, 0, 127, 0.3); }
+        .card-level { border-left: 6px solid var(--secondary); box-shadow: 0 15px 35px -10px rgba(0, 229, 255, 0.3); }
+
+        /* --- Game Grid & UI --- */
+        .header { display: none; padding: 25px 20px 10px; z-index: 10; }
+        #game-area { display: none; flex: 1; justify-content: center; align-items: center; padding: 15px; }
+        #grid { 
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; 
+            background: rgba(255,255,255,0.02); padding: 15px; border-radius: 20px;
+            width: 100%; max-width: 380px; aspect-ratio: 1/1; 
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .cell { background: rgba(255,255,255,0.05); border-radius: 8px; position: relative; transition: 0.3s; }
+        
+        /* Neon Filled Blocks */
+        .filled { 
+            background-color: var(--b-col) !important; 
+            box-shadow: 0 0 15px var(--g-col), inset 0 0 8px rgba(255,255,255,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: blockPop 0.3s ease-out;
+        }
+        @keyframes blockPop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+
+        /* Pieces Section */
+        #pieces-container { display: none; height: 180px; justify-content: center; align-items: center; gap: 25px; }
+        .piece { display: grid; gap: 4px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6)); transition: 0.2s; }
+        .p-block { width: 32px; height: 32px; border-radius: 6px; }
+
+        /* Popups */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9000; backdrop-filter: blur(8px); }
+        .popup { background: #0a0a0c; padding: 45px; border-radius: 35px; border: 1px solid rgba(255,255,255,0.1); width: 85%; max-width: 400px; box-shadow: 0 0 50px rgba(255,0,127,0.2); }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="loader-logo">MONIKA PLAY</div>
+        <div style="margin-top:20px; color:#444; letter-spacing:4px; font-size:10px;">ULTRA GLOW EDITION</div>
+    </div>
+
+    <div id="home-screen">
+        <div class="logo-main">MONIKA PLAY</div>
+        <div class="mode-card card-classic" onclick="start('classic')">
+            <h2 style="color:var(--primary); margin:0;">CLASSIC</h2>
+            <p style="color:#888; margin:10px 0 0; font-size:14px;">Infinity High Score Mode</p>
+        </div>
+        <div class="mode-card card-level" onclick="start('level')">
+            <h2 style="color:var(--secondary); margin:0;">LEVELS</h2>
+            <p style="color:#888; margin:10px 0 0; font-size:14px;">Challenging Targets & Bombs</p>
+        </div>
+    </div>
+
+    <div class="header" id="head">
+        <div id="m-title" style="font-weight:900; font-size: 24px; text-shadow: 0 0 10px currentColor;">MODE</div>
+        <div style="font-size: 14px; margin-top: 10px; opacity:0.7;">Score: <span id="sc" style="color:#fff; font-weight:bold;">0</span> | <span id="gt">Target: 0</span></div>
+    </div>
+
+    <div id="game-area"><div id="grid"></div></div>
+    <div id="pieces-container"></div>
+
+    <div id="ovl" class="overlay">
+        <div class="popup">
+            <h1 id="ot" style="margin:0; font-size: 32px;">OVER</h1>
+            <p id="od" style="margin:20px 0; color:#888;">Your Score: 0</p>
+            <button style="padding:18px; width:100%; border-radius:50px; background:var(--primary); color:white; border:none; font-weight:bold; font-size:16px; box-shadow: 0 10px 20px rgba(255,0,127,0.3);" onclick="location.reload()">MAIN MENU</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0, mode = 'classic', level = 1, target = 500, grid = Array(64).fill(null);
+        let piecesData = [];
+        
+        const classicShapes = [
+            {d:[[1]]}, {d:[[1,1]]}, {d:[[1],[1]]}, {d:[[1,1],[1,1]]}, 
+            {d:[[1,1,1]]}, {d:[[1],[1],[1]]}, {d:[[1,1],[1,0]]},
+            {d:[[1,1,1],[0,1,0]]}, {d:[[1,1,1,1]]}
+        ];
+        const levelShapes = [...classicShapes, {d:[['B']]}];
+        const cols = [
+            {b:'#ff007f',g:'rgba(255,0,127,0.6)'}, 
+            {b:'#00FF7F',g:'rgba(0,255,127,0.6)'}, 
+            {b:'#00E5FF',g:'rgba(0,229,255,0.6)'},
+            {b:'#7000ff',g:'rgba(112,0,255,0.6)'}
+        ];
+
+        window.onload = () => setTimeout(() => {
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('home-screen').style.display = 'flex';
+        }, 2500);
+
+        function start(m) {
+            mode = m;
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('head').style.display = 'block';
+            document.getElementById('game-area').style.display = 'flex';
+            document.getElementById('pieces-container').style.display = 'flex';
+            if(mode==='classic') {
+                document.getElementById('m-title').innerText = "CLASSIC";
+                document.getElementById('m-title').style.color = 'var(--primary)';
+                document.getElementById('gt').innerHTML = `Best: <b>${localStorage.getItem('monikaBest')||0}</b>`;
+            } else updateLevelUI();
+            init();
+        }
+
+        function updateLevelUI() {
+            document.getElementById('m-title').innerText = "LEVEL " + level;
+            document.getElementById('m-title').style.color = 'var(--secondary)';
+            document.getElementById('gt').innerHTML = `Target: <b>${target}</b>`;
+        }
+
+        function init() {
+            score = 0; grid.fill(null);
+            makeGrid(); makePieces();
+        }
+
+        function makeGrid() {
+            const g = document.getElementById('grid'); g.innerHTML = '';
+            for(let i=0; i<64; i++) {
+                let c = document.createElement('div'); c.className = 'cell'; c.id = 'c-'+i;
+                g.appendChild(c);
+            }
+        }
+
+        function makePieces() {
+            const cont = document.getElementById('pieces-container'); cont.innerHTML = '';
+            const current = (mode === 'classic') ? classicShapes : levelShapes;
+            for(let i=0; i<3; i++) {
+                let s = current[Math.floor(Math.random()*current.length)];
+                let c = cols[Math.floor(Math.random()*cols.length)];
+                piecesData[i] = { s: JSON.parse(JSON.stringify(s.d)), c: c };
+                let p = document.createElement('div'); p.className = 'piece'; p.id = 'p-'+i;
+                drawP(p, piecesData[i].s, c);
+                
+                let lt = 0;
+                p.addEventListener('touchstart', (e) => {
+                    let now = Date.now();
+                    if(now - lt < 300 && piecesData[i].s[0][0] !== 'B') { rotateP(i, p); e.preventDefault(); }
+                    lt = now;
+                });
+                drag(p, i);
+                cont.appendChild(p);
+            }
+            checkOver();
+        }
+
+        function drawP(el, sh, col) {
+            el.innerHTML = ''; el.style.gridTemplateColumns = `repeat(${sh[0].length}, 32px)`;
+            sh.forEach(r => r.forEach(v => {
+                let b = document.createElement('div'); b.className = 'p-block';
+                if(v==='B') { b.classList.add('is-bomb'); b.style.background="#ffea00"; b.style.borderRadius="50%"; }
+                else if(v) { b.style.background = col.b; b.style.boxShadow = `0 0 10px ${col.g}`; }
+                else b.style.visibility = 'hidden';
+                el.appendChild(b);
+            }));
+        }
+
+        function rotateP(idx, el) {
+            let s = piecesData[idx].s;
+            piecesData[idx].s = s[0].map((_, c) => s.map(r => r[c]).reverse());
+            drawP(el, piecesData[idx].s, piecesData[idx].c);
+        }
+
+        function drag(p, idx) {
+            let sx, sy;
+            p.addEventListener('touchstart', (e) => { 
+                let r = p.getBoundingClientRect(); sx = r.width/2; sy = r.height/2; 
+                p.style.transform="scale(1.1) translateY(-20px)";
+            });
+            p.addEventListener('touchmove', (e) => {
+                e.preventDefault(); let t = e.touches[0];
+                p.style.position = 'fixed'; p.style.left = (t.clientX - sx) + 'px'; p.style.top = (t.clientY - sy - 80) + 'px';
+            });
+            p.addEventListener('touchend', (e) => {
+                let r = p.getBoundingClientRect(); p.style.display = 'none';
+                let tar = document.elementFromPoint(r.left + 16, r.top + 16); p.style.display = 'grid';
+                if(tar && tar.classList.contains('cell')) {
+                    let id = parseInt(tar.id.split('-')[1]), row = Math.floor(id/8), col = id%8;
+                    if(piecesData[idx].s[0][0] === 'B') { explode(row, col); p.remove(); next(); }
+                    else if(canPlace(row, col, piecesData[idx].s)) { place(row, col, piecesData[idx].s, piecesData[idx].c); p.remove(); next(); }
+                    else resetP(p);
+                } else resetP(p);
+            });
+        }
+
+        function explode(r, c) {
+            for(let i=r-1; i<=r+1; i++) for(let j=c-1; j<=c+1; j++) if(i>=0&&i<8&&j>=0&&j<8) grid[i*8+j]=null;
+            score += 50; updateUI();
+        }
+
+        function canPlace(sr, sc, sh) {
+            for(let r=0; r<sh.length; r++) for(let c=0; c<sh[r].length; c++) {
+                if(sh[r][c]) { let cr=sr+r, cc=sc+c; if(cr>=8||cc>=8||grid[cr*8+cc]) return false; }
+            } return true;
+        }
+
+        function place(sr, sc, sh, col) {
+            for(let r=0; r<sh.length; r++) for(let c=0; c<sh[r].length; c++) if(sh[r][c]) grid[(sr+r)*8+(sc+c)]=col;
+            score += 10; checkLines(); updateUI();
+        }
+
+        function next() {
+            if(document.getElementById('pieces-container').children.length === 0) makePieces();
+            if(mode === 'level' && score >= target) {
+                level++; target += 500; updateLevelUI();
+                showEnd("LEVEL COMPLETED!", "Target for Level " + level + ": " + target);
+            }
+        }
+
+        function checkLines() {
+            let rs=[], cs=[];
+            for(let i=0; i<8; i++) {
+                let rf=true, cf=true;
+                for(let j=0; j<8; j++) { if(!grid[i*8+j]) rf=false; if(!grid[j*8+i]) cf=false; }
+                if(rf) rs.push(i); if(cf) cs.push(i);
+            }
+            rs.forEach(r => { for(let j=0; j<8; j++) grid[r*8+j]=null; });
+            cs.forEach(c => { for(let j=0; j<8; j++) grid[j*8+c]=null; });
+            score += (rs.length + cs.length) * 100;
+        }
+
+        function updateUI() {
+            document.getElementById('sc').innerText = score;
+            grid.forEach((v, i) => {
+                let c = document.getElementById('c-'+i);
+                if(v) { c.classList.add('filled'); c.style.setProperty('--b-col', v.b); c.style.setProperty('--g-col', v.g); }
+                else { c.classList.remove('filled'); }
+            });
+        }
+
+        function showEnd(t, d) {
+            document.getElementById('ot').innerText = t; document.getElementById('od').innerText = d;
+            document.getElementById('ovl').style.display = 'flex';
+        }
+
+        function checkOver() {
+            const ps = document.querySelectorAll('.piece'); let ok = false;
+            ps.forEach(p => {
+                let idx = parseInt(p.id.split('-')[1]), sh = piecesData[idx].s;
+                if(sh[0][0]==='B') ok = true;
+                else for(let i=0; i<64; i++) if(canPlace(Math.floor(i/8), i%8, sh)) ok = true;
+            });
+            if(!ok && ps.length > 0) {
+                if(mode==='classic' && score > (localStorage.getItem('monikaBest')||0)) localStorage.setItem('monikaBest', score);
+                showEnd("GAME OVER", "Score: " + score);
+            }
+        }
+
+        function resetP(p) { p.style.position='relative'; p.style.left='0'; p.style.top='0'; p.style.transform="scale(1)"; }
+    </script>
+</body>
+</html>
