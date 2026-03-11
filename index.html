@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Monika Play - Ads Ready</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --primary: #ff007f; --secondary: #00E5FF; --bg: #020205; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        
+        body { 
+            background: var(--bg); color: white; text-align: center; 
+            font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; 
+            display: flex; flex-direction: column; height: 100vh;
+        }
+
+        /* Splash Screen */
+        #splash {
+            position: fixed; inset: 0; background: #000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .loader-text { font-size: 45px; font-weight: 900; color: var(--primary); text-shadow: 0 0 15px var(--primary); }
+
+        /* Home */
+        #home { display: none; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 65px); }
+        .logo-main { font-size: 40px; font-weight: 900; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
+        
+        .card {
+            width: 85%; max-width: 300px; padding: 25px; border-radius: 20px; margin-bottom: 15px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+        /* Game Board */
+        #grid { 
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; 
+            background: rgba(255,255,255,0.03); padding: 8px; border-radius: 12px;
+            width: 92%; margin: 0 auto; aspect-ratio: 1/1; border: 1px solid #333;
+        }
+        .cell { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .filled { background-color: var(--b-col) !important; box-shadow: 0 0 12px var(--g-col); }
+
+        #pieces { height: 140px; display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .piece { display: grid; gap: 3px; z-index: 100; }
+        .p-block { width: 26px; height: 26px; border-radius: 4px; }
+
+        /* Overlay */
+        .ovl { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 8000; }
+        .popup { background: #111; padding: 30px; border-radius: 25px; border: 1px solid var(--primary); width: 80%; }
+        
+        /* Ad Banner Section */
+        #ad-banner {
+            position: fixed; bottom: 0; width: 100%; height: 60px;
+            background: #000; border-top: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="splash"><div class="loader-text">MONIKA PLAY</div></div>
+
+    <div id="home">
+        <div class="logo-main">MONIKA PLAY</div>
+        <div class="card" onclick="start('classic')" style="border-left: 6px solid var(--primary);">
+            <h2 style="color:var(--primary); margin:0;">CLASSIC</h2>
+            <p style="font-size:12px; opacity:0.6;">सादा गेम • हाई स्कोर</p>
+        </div>
+        <div class="card" onclick="start('level')" style="border-left: 6px solid var(--secondary);">
+            <h2 style="color:var(--secondary); margin:0;">LEVELS</h2>
+            <p style="font-size:12px; opacity:0.6;">टाइमर चैलेंज • धमाका</p>
+        </div>
+    </div>
+
+    <div id="game-ui" style="display:none; flex:1; flex-direction:column; padding-bottom:70px;">
+        <div style="padding:15px; display:flex; justify-content:space-between; align-items:center;">
+            <div id="m-text" style="font-weight:bold; color:var(--secondary);">MODE</div>
+            <div id="timer-ui" style="font-family:monospace; font-size:18px;"></div>
+            <div>Score: <span id="score-val">0</span></div>
+        </div>
+        <div id="grid"></div>
+        <div id="pieces"></div>
+    </div>
+
+    <div id="ovl" class="ovl">
+        <div class="popup">
+            <h2 id="ovl-t">GAME OVER</h2>
+            <p id="final-score"></p>
+            <button onclick="location.reload()" style="padding:12px 30px; border-radius:30px; background:var(--primary); color:white; border:none; font-weight:bold;">RESTART</button>
+        </div>
+    </div>
+
+    <div id="ad-banner" onclick="adClick()">
+        <img id="ad-img" src="" style="width:100%; height:100%; object-fit: contain; cursor:pointer;">
+    </div>
+
+    <script>
+        let grid = Array(64).fill(null), score = 0, mode = 'classic', active = false, timeLeft = 60;
+        let timerInterval;
+
+        // --- विज्ञापन सेटिंग्स ---
+        const myAds = [
+            {img: "https://via.placeholder.com/320x50/ff007f/ffffff?text=Visit+Our+Shop", link: "https://example.com"},
+            {img: "https://via.placeholder.com/320x50/00E5FF/000000?text=Download+New+Apps", link: "https://example.com"}
+        ];
+        let currentAd = 0;
+        function rotateAds() {
+            const adImg = document.getElementById('ad-img');
+            adImg.src = myAds[currentAd].img;
+            currentAd = (currentAd + 1) % myAds.length;
+        }
+        setInterval(rotateAds, 8000); rotateAds();
+        function adClick() { window.open(myAds[currentAd].link, '_blank'); }
+
+        const shapes = [{d:[[1]]}, {d:[[1,1]]}, {d:[[1,1],[1,1]]}, {d:[[1,1,1]]}, {d:[[1,1,1,1]]}];
+        const cols = [{b:'#ff007f',g:'rgba(255,0,127,0.5)'}, {b:'#00E5FF',g:'rgba(0,229,255,0.5)'}, {b:'#00FF7F',g:'rgba(0,255,127,0.5)'}];
+
+        window.onload = () => setTimeout(() => {
+            document.getElementById('splash').style.display='none';
+            document.getElementById('home').style.display='flex';
+        }, 1500);
+
+        function start(m) {
+            mode = m; active = true; score = 0;
+            document.getElementById('home').style.display='none';
+            document.getElementById('game-ui').style.display='flex';
+            document.getElementById('m-text').innerText = mode.toUpperCase();
+            
+            if(mode === 'level') {
+                timeLeft = 60;
+                document.getElementById('timer-ui').innerText = "60s";
+                timerInterval = setInterval(() => {
+                    if(active) {
+                        timeLeft--;
+                        document.getElementById('timer-ui').innerText = timeLeft + "s";
+                        if(timeLeft <= 0) endGame("TIME UP!");
+                    }
+                }, 1000);
+            }
+            initGrid();
+        }
+
+        function initGrid() {
+            grid.fill(null);
+            const g = document.getElementById('grid'); g.innerHTML = '';
+            for(let i=0; i<64; i++) {
+                let c = document.createElement('div');
+                c.className = 'cell'; c.id = 'c-'+i;
+                g.appendChild(c);
+            }
+            makePieces();
+        }
+
+        function makePieces() {
+            const cont = document.getElementById('pieces'); cont.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                let s = shapes[Math.floor(Math.random()*shapes.length)];
+                let c = cols[Math.floor(Math.random()*cols.length)];
+                let p = document.createElement('div'); p.className = 'piece'; p.id = 'p-'+i;
+                p.style.gridTemplateColumns = `repeat(${s.d[0].length}, 26px)`;
+                s.d.forEach(r => r.forEach(v => {
+                    let b = document.createElement('div'); b.className = 'p-block';
+                    if(v) { b.style.background = c.b; b.style.boxShadow=`0 0 10px ${c.g}`; }
+                    else b.style.visibility = 'hidden';
+                    p.appendChild(b);
+                }));
+                setupDrag(p, s.d, c);
+                cont.appendChild(p);
+            }
+        }
+
+        function setupDrag(p, sh, col) {
+            let sx, sy;
+            p.ontouchstart = (e) => { 
+                const t = e.touches[0];
+                sx = p.offsetWidth/2; sy = p.offsetHeight/2; 
+                p.style.transform = "scale(1.2)";
+            };
+            p.ontouchmove = (e) => {
+                let t = e.touches[0];
+                p.style.position='fixed'; 
+                p.style.left=(t.clientX-sx)+'px'; 
+                p.style.top=(t.clientY-sy-50)+'px';
+            };
+            p.ontouchend = (e) => {
+                let r = p.getBoundingClientRect(); p.style.display='none';
+                let tar = document.elementFromPoint(r.left+sx, r.top+sy); p.style.display='grid';
+                if(tar && tar.id.startsWith('c-')) {
+                    let id = parseInt(tar.id.split('-')[1]), rr=Math.floor(id/8), cc=id%8;
+                    if(canPlace(rr, cc, sh)) {
+                        place(rr, cc, sh, col); 
+                        p.remove(); 
+                        if(!document.getElementById('pieces').children.length) makePieces();
+                    } else resetP(p);
+                } else resetP(p);
+            };
+        }
+
+        function canPlace(r, c, sh) {
+            for(let i=0; i<sh.length; i++) for(let j=0; j<sh[i].length; j++) {
+                if(sh[i][j]) { let nr=r+i, nc=c+j; if(nr>=8||nc>=8||grid[nr*8+nc]) return false; }
+            } return true;
+        }
+
+        function place(r, c, sh, col) {
+            for(let i=0; i<sh.length; i++) for(let j=0; j<sh[i].length; j++) if(sh[i][j]) grid[(r+i)*8+(c+j)]=col;
+            score += 10; checkLines(); update();
+        }
+
+        function checkLines() {
+            let rs=[], cs=[];
+            for(let i=0; i<8; i++) {
+                let rf=true, cf=true;
+                for(let j=0; j<8; j++) { if(!grid[i*8+j]) rf=false; if(!grid[j*8+i]) cf=false; }
+                if(rf) rs.push(i); if(cf) cs.push(i);
+            }
+            rs.forEach(r => { for(let j=0; j<8; j++) grid[r*8+j]=null; });
+            cs.forEach(c => { for(let j=0; j<8; j++) grid[j*8+c]=null; });
+            score += (rs.length + cs.length) * 100;
+        }
+
+        function update() {
+            document.getElementById('score-val').innerText = score;
+            grid.forEach((v, i) => {
+                let el = document.getElementById('c-'+i);
+                if(v) { el.classList.add('filled'); el.style.setProperty('--b-col', v.b); el.style.setProperty('--g-col', v.g); }
+                else el.classList.remove('filled');
+            });
+        }
+
+        function resetP(p) { p.style.position='static'; p.style.transform='scale(1)'; }
+        function endGame(msg = "GAME OVER") { 
+            active = false; clearInterval(timerInterval);
+            document.getElementById('ovl-t').innerText = msg;
+            document.getElementById('final-score').innerText = "Score: " + score;
+            document.getElementById('ovl').style.display='flex'; 
+        }
+    </script>
+</body>
+</html>
