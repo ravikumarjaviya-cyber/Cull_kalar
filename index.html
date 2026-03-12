@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>बाल शिक्षा - All in One</title>
+    <style>
+        body { font-family: 'Comic Sans MS', cursive, sans-serif; background: #fff5f8; text-align: center; padding: 10px; margin: 0; }
+        
+        /* ऊपर का डिस्प्ले बोर्ड */
+        #main-display {
+            background: #ffffff; border: 8px solid #ff7675; border-radius: 30px; 
+            padding: 20px; max-width: 350px; margin: 20px auto; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); min-height: 280px;
+        }
+        #big-letter { font-size: 80px; font-weight: bold; color: #2d3436; margin: 0; }
+        #big-pic { font-size: 120px; margin: 10px 0; display: block; }
+        #big-word { font-size: 35px; font-weight: bold; color: #d63031; text-transform: uppercase; }
+
+        .section-header { background: #6c5ce7; color: white; padding: 12px; border-radius: 30px; margin: 25px auto 10px; max-width: 500px; font-size: 20px; }
+        
+        /* अक्षरों का जाल (Grid) */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; padding: 10px; max-width: 950px; margin: auto; }
+        
+        .card { 
+            background: white; border: 3px solid #fdcb6e; border-radius: 15px; 
+            padding: 20px 5px; font-size: 28px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 0 #fab1a0; transition: 0.1s;
+        }
+        .card:active { transform: translateY(4px); box-shadow: none; }
+        .hi-card { border-color: #55efc4; box-shadow: 0 4px 0 #00b894; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color: #ff4757; margin-bottom: 5px;">किड्स पाठशाला 🏫</h1>
+
+    <div id="main-display">
+        <div id="big-letter">?</div>
+        <div id="big-pic">🎯</div>
+        <div id="big-word">शुरू करें</div>
+    </div>
+
+    <div class="section-header">English Alphabets (A to Z)</div>
+    <div id="en-grid" class="grid"></div>
+
+    <div class="section-header">हिंदी वर्णमाला (अ से ज्ञ)</div>
+    <div id="hi-grid" class="grid"></div>
+
+    <script>
+        const enData = {
+            'A':{w:'Apple', p:'🍎'}, 'B':{w:'Ball', p:'⚽'}, 'C':{w:'Cat', p:'🐱'}, 'D':{w:'Dog', p:'🐶'}, 'E':{w:'Elephant', p:'🐘'},
+            'F':{w:'Fish', p:'🐟'}, 'G':{w:'Grapes', p:'🍇'}, 'H':{w:'Hen', p:'🐔'}, 'I':{w:'Ice Cream', p:'🍦'}, 'J':{w:'Jug', p:'🍶'},
+            'K':{w:'Kite', p:'🪁'}, 'L':{w:'Lion', p:'🦁'}, 'M':{w:'Monkey', p:'🐒'}, 'N':{w:'Nest', p:'🪺'}, 'O':{w:'Orange', p:'🍊'},
+            'P':{w:'Peacock', p:'🦚'}, 'Q':{w:'Queen', p:'👸'}, 'R':{w:'Rose', p:'🌹'}, 'S':{w:'Swan', p:'🦢'}, 'T':{w:'Tiger', p:'🐅'},
+            'U':{w:'Umbrella', p:'☂️'}, 'V':{w:'Van', p:'🚐'}, 'W':{w:'Watch', p:'⌚'}, 'X':{w:'Xylophone', p:'🎹'}, 'Y':{w:'Yacht', p:'🛥️'}, 'Z':{w:'Zebra', p:'🦓'}
+        };
+
+        const hiData = {
+            'अ':{w:'अनार', p:'🍎'}, 'आ':{w:'आम', p:'🥭'}, 'इ':{w:'इमली', p:'🌳'}, 'ई':{w:'ईख', p:'🎋'}, 'उ':{w:'उल्लू', p:'🦉'}, 
+            'ऊ':{w:'ऊन', p:'🧶'}, 'ऋ':{w:'ऋषि', p:'🧘'}, 'ए':{w:'एड़ी', p:'🦶'}, 'ऐ':{w:'ऐनक', p:'👓'}, 'ओ':{w:'ओखली', p:'🥣'}, 
+            'औ':{w:'औरत', p:'👩'}, 'अं':{w:'अंगूर', p:'🍇'}, 'अः':{w:'खाली', p:'😀'},
+            'क':{w:'कबूतर', p:'🐦'}, 'ख':{w:'खरगोश', p:'🐇'}, 'ग':{w:'गमला', p:'🪴'}, 'घ':{w:'घड़ी', p:'⌚'}, 'च':{w:'चरखा', p:'🧵'}, 
+            'छ':{w:'छतरी', p:'☂️'}, 'ज':{w:'जहाज', p:'🚢'}, 'झ':{w:'झंडा', p:'🚩'}, 'ट':{w:'टमाटर', p:'🍅'}, 'ठ':{w:'ठठेरा', p:'🛠️'}, 
+            'ड':{w:'डमरू', p:'🥁'}, 'ढ':{w:'ढक्कन', p:'🥘'}, 'त':{w:'तरबूज', p:'🍉'}, 'थ':{w:'थर्मस', p:'🥤'}, 'द':{w:'दवात', p:'✒️'}, 
+            'ध':{w:'धनुष', p:'🏹'}, 'न':{w:'नल', p:'🚰'}, 'प':{w:'पतंग', p:'🪁'}, 'फ':{w:'फल', p:'🍎'}, 'ब':{w:'बकरी', p:'🐐'}, 
+            'भ':{w:'भालू', p:'🐻'}, 'म':{w:'मछली', p:'🐟'}, 'य':{w:'यज्ञ', p:'🔥'}, 'र':{w:'रथ', p:'🛒'}, 'ल':{w:'लट्टू', p:'🪀'}, 
+            'व':{w:'वकील', p:'⚖️'}, 'श':{w:'शलगम', p:'🥬'}, 'ष':{w:'षटकोण', p:'🔷'}, 'स':{w:'सपेरा', p:'🐍'}, 'ह':{w:'हाथी', p:'🐘'}, 
+            'क्ष':{w:'क्षत्रिय', p:'⚔️'}, 'त्र':{w:'त्रिशूल', p:'🔱'}, 'ज्ञ':{w:'ज्ञानी', p:'👴'}
+        };
+
+        const bLetter = document.getElementById('big-letter');
+        const bPic = document.getElementById('big-pic');
+        const bWord = document.getElementById('big-word');
+
+        function setupGrid(data, gridId, lang, prefix) {
+            const grid = document.getElementById(gridId);
+            for (let char in data) {
+                let card = document.createElement('div');
+                card.className = lang === 'hi-IN' ? 'card hi-card' : 'card';
+                card.innerText = char;
+                card.onclick = () => {
+                    // डिस्प्ले अपडेट करें
+                    bLetter.innerText = char;
+                    bPic.innerText = data[char].p;
+                    bWord.innerText = data[char].w;
+                    // आवाज़ निकालें
+                    speak(`${char} ${prefix} ${data[char].w}`, lang);
+                };
+                grid.appendChild(card);
+            }
+        }
+
+        function speak(text, lang) {
+            window.speechSynthesis.cancel();
+            let msg = new SpeechSynthesisUtterance(text);
+            msg.lang = lang;
+            msg.rate = 0.8;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // चालू करें
+        setupGrid(enData, 'en-grid', 'en-US', 'for');
+        setupGrid(hiData, 'hi-grid', 'hi-IN', 'से');
+    </script>
+</body>
+</html>
