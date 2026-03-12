@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>मास्टर जी की पाठशाला</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background: #fff5f8; text-align: center; margin: 0; padding: 10px; }
+        
+        /* डिस्प्ले बोर्ड जहाँ बड़ी फोटो दिखेगी */
+        #display-board {
+            background: white; border: 10px solid #ff4757; border-radius: 30px; 
+            padding: 20px; max-width: 350px; margin: 20px auto; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-height: 320px;
+        }
+        #big-letter { font-size: 110px; font-weight: bold; color: #2f3542; margin: 0; }
+        #big-pic { font-size: 120px; margin: 15px 0; display: block; }
+        #big-word { font-size: 45px; font-weight: bold; color: #ff4757; }
+
+        .title-bar { background: #1e90ff; color: white; padding: 15px; border-radius: 40px; margin: 30px auto 15px; max-width: 500px; font-size: 24px; box-shadow: 0 4px 0 #0984e3; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 12px; padding: 15px; max-width: 950px; margin: auto; }
+        
+        /* अक्षरों वाले बटन (बड़ी ABCD) */
+        .card { 
+            background: white; border: 4px solid #ffa502; border-radius: 20px; 
+            padding: 25px 5px; font-size: 38px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 6px 0 #eccc68; transition: 0.1s; color: #2f3542;
+        }
+        .card:active { transform: translateY(4px); box-shadow: none; }
+        .hindi-card { border-color: #2ed573; box-shadow: 0 6px 0 #7bed9f; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color: #ff4757; font-size: 35px; text-shadow: 2px 2px #fbc531;">मास्टर जी की क्लास 🎒</h1>
+
+    <div id="display-board">
+        <div id="big-letter">?</div>
+        <div id="big-pic">🌟</div>
+        <div id="big-word">नमस्ते बच्चों!</div>
+    </div>
+
+    <div class="title-bar">बड़ी ABCD (A-Z)</div>
+    <div id="en-grid" class="grid"></div>
+
+    <div class="title-bar">हिंदी वर्णमाला (अ-ज्ञ)</div>
+    <div id="hi-grid" class="grid"></div>
+
+    <script>
+        // डेटा: बड़ी ABCD
+        const enData = {
+            'A':{w:'एप्पल', p:'🍎'}, 'B':{w:'बॉल', p:'⚽'}, 'C':{w:'कैट', p:'🐱'}, 'D':{w:'डॉग', p:'🐶'}, 'E':{w:'एलीफैंट', p:'🐘'},
+            'F':{w:'फिश', p:'🐟'}, 'G':{w:'ग्रेप्स', p:'🍇'}, 'H':{w:'हेन', p:'🐔'}, 'I':{w:'आइसक्रीम', p:'🍦'}, 'J':{w:'जग', p:'🍶'},
+            'K':{w:'काइट', p:'🪁'}, 'L':{w:'लायन', p:'🦁'}, 'M':{w:'मंकी', p:'🐒'}, 'N':{w:'नेस्ट', p:'🪹'}, 'O':{w:'ऑरेंज', p:'🍊'},
+            'P':{w:'पैकॉक', p:'🦚'}, 'Q':{w:'क्वीन', p:'👸'}, 'R':{w:'रोज', p:'🌹'}, 'S':{w:'स्वान', p:'🦢'}, 'T':{w:'टाइगर', p:'🐅'},
+            'U':{w:'अम्ब्रेला', p:'☂️'}, 'V':{w:'वैन', p:'🚐'}, 'W':{w:'वॉच', p:'⌚'}, 'X':{w:'जाइलोफोन', p:'🎹'}, 'Y':{w:'याच', p:'🛥️'}, 'Z':{w:'जेब्रा', p:'🦓'}
+        };
+
+        // डेटा: हिंदी अ-ज्ञ
+        const hiData = {
+            'अ':{w:'अनार', p:'🍎'}, 'आ':{w:'आम', p:'🥭'}, 'इ':{w:'इमली', p:'🌳'}, 'ई':{w:'ईख', p:'🎋'}, 'उ':{w:'उल्लू', p:'🦉'}, 
+            'ऊ':{w:'ऊन', p:'🧶'}, 'ऋ':{w:'ऋषि', p:'🧘'}, 'ए':{w:'एड़ी', p:'🦶'}, 'ऐ':{w:'ऐनक', p:'👓'}, 'ओ':{w:'ओखली', p:'🥣'}, 
+            'औ':{w:'औरत', p:'👩'}, 'अं':{w:'अंगूर', p:'🍇'}, 'अः':{w:'खाली', p:'😀'},
+            'क':{w:'कबूतर', p:'🐦'}, 'ख':{w:'खरगोश', p:'🐇'}, 'ग':{w:'गमला', p:'🪴'}, 'घ':{w:'घड़ी', p:'⌚'}, 'च':{w:'चरखा', p:'🧵'}, 
+            'छ':{w:'छतरी', p:'☂️'}, 'ज':{w:'जहाज', p:'🚢'}, 'झ':{w:'झंडा', p:'🚩'}, 'ट':{w:'टमाटर', p:'🍅'}, 'ठ':{w:'ठठेरा', p:'🛠️'}, 
+            'ड':{w:'डमरू', p:'🥁'}, 'ढ':{w:'ढक्कन', p:'🥘'}, 'त':{w:'तरबूज', p:'🍉'}, 'थ':{w:'थर्मस', p:'🥤'}, 'द':{w:'दवात', p:'✒️'}, 
+            'ध':{w:'धनुष', p:'🏹'}, 'न':{w:'नल', p:'🚰'}, 'प':{w:'पतंग', p:'🪁'}, 'फ':{w:'फल', p:'🍎'}, 'ब':{w:'बकरी', p:'🐐'}, 
+            'भ':{w:'भालू', p:'🐻'}, 'म':{w:'मछली', p:'🐟'}, 'य':{w:'यज्ञ', p:'🔥'}, 'र':{w:'रथ', p:'🛒'}, 'ल':{w:'लट्टू', p:'🪀'}, 
+            'व':{w:'वकील', p:'⚖️'}, 'श':{w:'शलगम', p:'🥬'}, 'ष':{w:'षटकोण', p:'🔷'}, 'स':{w:'सपेरा', p:'🐍'}, 'ह':{w:'हाथी', p:'🐘'}, 
+            'क्ष':{w:'क्षत्रिय', p:'⚔️'}, 'त्र':{w:'त्रिशूल', p:'🔱'}, 'ज्ञ':{w:'ज्ञानी', p:'👴'}
+        };
+
+        const bLetter = document.getElementById('big-letter');
+        const bPic = document.getElementById('big-pic');
+        const bWord = document.getElementById('big-word');
+
+        function loadAlphabet(data, gridId, isHindi) {
+            const grid = document.getElementById(gridId);
+            for (let char in data) {
+                let card = document.createElement('div');
+                card.className = isHindi ? 'card hindi-card' : 'card';
+                card.innerText = char;
+                
+                card.onclick = () => {
+                    bLetter.innerText = char;
+                    bPic.innerText = data[char].p;
+                    bWord.innerText = data[char].w;
+                    
+                    let text = isHindi ? `${char} से ${data[char].w}` : `${char} फॉर ${data[char].w}`;
+                    speakNow(text);
+                };
+                grid.appendChild(card);
+            }
+        }
+
+        function speakNow(text) {
+            window.speechSynthesis.cancel();
+            let speech = new SpeechSynthesisUtterance(text);
+            speech.lang = 'hi-IN'; 
+            speech.rate = 0.7;  // धीमी आवाज़
+            speech.pitch = 1.3; // मास्टर जी का उत्साह
+            window.speechSynthesis.speak(speech);
+        }
+
+        loadAlphabet(enData, 'en-grid', false);
+        loadAlphabet(hiData, 'hi-grid', true);
+    </script>
+</body>
+</html>
