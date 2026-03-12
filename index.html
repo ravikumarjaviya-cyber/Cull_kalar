@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>बाल शिक्षा ऐप</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f3; text-align: center; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; text-shadow: 2px 2px #bdc3c7; }
+        .section-title { background: #ff7675; color: white; padding: 10px; border-radius: 10px; margin-top: 30px; font-size: 24px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 15px; padding: 20px; max-width: 900px; margin: auto; }
+        .letter-card { 
+            background: white; border: 3px solid #74b9ff; border-radius: 15px; 
+            padding: 20px 10px; font-size: 30px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;
+        }
+        .letter-card:hover { transform: translateY(-5px); background: #74b9ff; color: white; }
+        .hindi-card { border-color: #55efc4; }
+        .hindi-card:hover { background: #55efc4; }
+    </style>
+</head>
+<body>
+
+    <h1>नमस्ते बच्चों! ✋</h1>
+    <p>अक्षर पर क्लिक करो और सुनो!</p>
+
+    <div class="section-title">English Alphabets (A-Z)</div>
+    <div id="english-grid" class="grid"></div>
+
+    <div class="section-title">हिंदी वर्णमाला (अ-ज्ञ)</div>
+    <div id="hindi-grid" class="grid"></div>
+
+    <script>
+        const englishLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        const hindiLetters = [
+            "अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ", "औ", "अं", "अः",
+            "क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ", "ट", "ठ", "ड", "ढ", "ण",
+            "त", "थ", "द", "ध", "न", "प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श", "ष", "स", "ह", "क्ष", "त्र", "ज्ञ"
+        ];
+
+        // English Letters को स्क्रीन पर दिखाना
+        const enGrid = document.getElementById('english-grid');
+        englishLetters.forEach(letter => {
+            let div = document.createElement('div');
+            div.className = 'letter-card';
+            div.innerText = letter;
+            div.onclick = () => speak(letter, 'en-US');
+            enGrid.appendChild(div);
+        });
+
+        // Hindi Letters को स्क्रीन पर दिखाना
+        const hiGrid = document.getElementById('hindi-grid');
+        hindiLetters.forEach(letter => {
+            let div = document.createElement('div');
+            div.className = 'letter-card hindi-card';
+            div.innerText = letter;
+            div.onclick = () => speak(letter, 'hi-IN');
+            hiGrid.appendChild(div);
+        });
+
+        // बोलने वाला फंक्शन
+        function speak(text, lang) {
+            window.speechSynthesis.cancel(); // पुराने साउंड को रोकें
+            let msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = lang;
+            msg.rate = 0.8; // बोलने की रफ़्तार थोड़ी धीरे ताकि बच्चा समझ सके
+            window.speechSynthesis.speak(msg);
+        }
+    </script>
+
+</body>
+</html>
