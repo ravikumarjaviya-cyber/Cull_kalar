@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>बच्चों की पाठशाला</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f0f8ff; text-align: center; }
+        h1 { color: #ff4500; font-size: 3rem; }
+        .container { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; padding: 20px; }
+        .card { 
+            background: white; border: 5px solid #ffcc00; border-radius: 20px; 
+            padding: 20px; cursor: pointer; transition: transform 0.2s; width: 150px;
+        }
+        .card:hover { transform: scale(1.1); background-color: #fff9e6; }
+        .emoji { font-size: 80px; }
+        .name { font-size: 24px; font-weight: bold; color: #333; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>पढ़ो और खेलो! 🎨</h1>
+    <p style="font-size: 20px;">किसी भी फोटो पर क्लिक करो</p>
+
+    <div class="container">
+        <div class="card" onclick="speak('यह सेब है, Apple is good for health')">
+            <div class="emoji">🍎</div>
+            <div class="name">सेब</div>
+        </div>
+
+        <div class="card" onclick="speak('यह आम है, फलों का राजा')">
+            <div class="emoji">🥭</div>
+            <div class="name">आम</div>
+        </div>
+
+        <div class="card" onclick="speak('यह हाथी है, सबसे विशाल जानवर')">
+            <div class="emoji">🐘</div>
+            <div class="name">हाथी</div>
+        </div>
+
+        <div class="card" onclick="speak('ये अंगूर हैं, खट्टे मीठे अंगूर')">
+            <div class="emoji">🍇</div>
+            <div class="name">अंगूर</div>
+        </div>
+    </div>
+
+    <script>
+        function speak(text) {
+            // यह कोड मोबाइल या कंप्यूटर की आवाज़ चालू करता है
+            let msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'hi-IN'; // हिंदी आवाज़ के लिए
+            window.speechSynthesis.speak(msg);
+        }
+    </script>
+
+</body>
+</html>
