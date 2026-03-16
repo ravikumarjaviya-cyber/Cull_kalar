@@ -1,0 +1,24 @@
+function startGame(mode) {
+    // 1. सबसे पहले मेन्यू स्क्रीन को चुनें और उसे छुपा दें
+    const menu = document.getElementById("game-menu");
+    menu.style.display = "none";
+
+    // 2. अब गेम बोर्ड वाले हिस्से को दिखाएं
+    const gameArea = document.getElementById("game-area");
+    gameArea.style.display = "block";
+
+    // 3. कौन सा मोड चुना गया है, उसे चेक करें
+    if (mode === 'computer') {
+        console.log("कंप्यूटर मोड शुरू हो रहा है...");
+        initComputerGame(); // यहाँ कंप्यूटर के साथ खेलने का फंक्शन बना सकते हैं
+    } else if (mode === 'local') {
+        console.log("लोकल मल्टीप्लेयर मोड शुरू...");
+    } else if (mode === 'online') {
+        console.log("ऑनलाइन मोड अभी तैयार नहीं है।");
+    }
+}
+
+// एक छोटा सा टेस्ट फंक्शन
+function initComputerGame() {
+    alert("कंप्यूटर के खिलाफ खेल शुरू हो गया है!");
+}
