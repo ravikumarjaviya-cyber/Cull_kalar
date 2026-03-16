@@ -1,0 +1,35 @@
+import random
+
+def roll_dice():
+    return random.randint(1, 6)
+
+def move_piece(current_position, dice_value):
+    new_position = current_position + dice_value
+    
+    # लूडो में 56 या 57 स्टेप्स होते हैं अंत तक पहुँचने के लिए
+    if new_position > 57:
+        print("जीतने के लिए सटीक नंबर चाहिए!")
+        return current_position
+    
+    return new_position
+
+# टेस्ट
+dice = roll_dice()
+print(f"पासा फेंका: {dice}")
+pos = move_piece(10, dice)
+print(f"नई स्थिति: {pos}")
+// JavaScript (React/Web) उदाहरण
+import AgoraRTC from "agora-rtc-sdk-ng";
+
+let client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+async function startBasicCall() {
+    // App ID और Token डालकर जॉइन करें
+    await client.join("YOUR_APP_ID", "CHANNEL_NAME", "TOKEN", null);
+    
+    // अपना माइक चालू करें
+    const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+    await client.publish([localAudioTrack]);
+    
+    console.log("Voice chat started!");
+}
